@@ -8,10 +8,10 @@
 -- @license MIT
 
 --- Request factory
-local Request = require ".lugate.request"
+local Request = require ".request"
 
 --- HTTP Statuses
-local HttpStatuses = require '.lugate.http_statuses'
+local HttpStatuses = require '.http_statuses'
 
 --- The lua gateway class definition
 local Lugate = {

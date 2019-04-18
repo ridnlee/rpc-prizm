@@ -15,15 +15,10 @@ rm -rf /tmp/luarocks && \
 rm -rf ~/.cache/luarocks
 
 # Delete default config
-#RUN rm -r /etc/nginx/conf.d && rm /etc/nginx/nginx.conf
-#RUN /usr/local/bin/luarocks install tmp
 RUN /usr/local/bin/luarocks install rapidjson
 RUN /usr/local/bin/luarocks install redis-lua
 
 COPY ./docker/nginx/lugate /etc/nginx/lugate
-COPY ./docker/nginx/lugate.lua /etc/nginx/lugate.lua
-#COPY ./docker/nginx/tmp /tmp/tmp
-#RUN /usr/local/bin/luarocks install /tmp/tmp/tmp-0.6.1-1.rockspec
 
 # Create folder for PID file
 RUN mkdir -p /run/nginx
