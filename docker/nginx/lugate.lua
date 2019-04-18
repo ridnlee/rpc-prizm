@@ -38,14 +38,12 @@ function Lugate:new(config)
   config.hooks = config.hooks or {}
   config.hooks.pre = config.hooks.pre or function() end
   config.hooks.post = config.hooks.post or function() end
-  config.hooks.cache = config.hooks.cache or function() end
   config.debug = config.debug or false
 
   assert(type(config.ngx) == "table", "Parameter 'ngx' is required and should be a table!")
   assert(type(config.json) == "table", "Parameter 'json' is required and should be a table!")
   assert(type(config.hooks.pre) == "function", "Parameter 'pre' is required and should be a function!")
   assert(type(config.hooks.post) == "function", "Parameter 'post' is required and should be a function!")
-  assert(type(config.hooks.cache) == "function", "Parameter 'cache' is required and should be a function!")
   assert(type(config.debug) == "boolean", "Parameter 'debug' is required and should be a function!")
 
   -- Define metatable
@@ -53,15 +51,12 @@ function Lugate:new(config)
   self.__index = self
 
   -- Define services and configs
-  config.cache = config.cache or {'dummy'}
-  local cache = lugate:load_module(config.cache, { dummy = ".lugate.cache.dummy", redis = ".lugate.cache.redis" })
 
   lugate.hooks = config.hooks
   lugate.ngx = config.ngx
   lugate.json = config.json
   lugate.routes = config.routes or {}
-  lugate.cache = cache
-  lugate.req_dat = { num = {}, key = {}, ttl = {}, tags = {}, ids = {} }
+  lugate.req_dat = { num = {}, ids = {} }
   lugate.responses = {}
   lugate.debug = config.debug
 
@@ -92,9 +87,6 @@ end
 function Lugate:init(config)
   -- Create new tmp instance
   local lugate = self:new(config)
-
-  -- Print version to header
-  lugate.ngx.header["X-Lugate-Version"] = Lugate.VERSION;
 
   -- Check request method
   if 'POST' ~= lugate.ngx.req.get_method() then
@@ -243,18 +235,13 @@ end
 function Lugate:attach_request(i, request, ngx_requests)
   self:write_log(request:get_body(), Lugate.REQ_PREF)
 
-  if request:is_cachable() and self.cache:get(request:get_key()) then
-    self.responses[i] = self.cache:get(request:get_key())
-  elseif request:is_proxy_call() then
+  if request:is_proxy_call() then
     local req, err = request:get_ngx_request()
     if req then
       table.insert(ngx_requests, req)
       local req_count = #ngx_requests
 
       self.req_dat.num[req_count] = i
-      self.req_dat.key[req_count] = request:get_key()
-      self.req_dat.ttl[req_count] = request:get_ttl()
-      self.req_dat.tags[req_count] = request:get_tags()
       self.req_dat.ids[req_count] = request:get_id()
     else
       self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
@@ -297,17 +284,6 @@ function Lugate:handle_response(n, response)
         Lugate.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, self.req_dat.ids[n]
       ))
       broken = true
-    end
-
-    -- Store to cache
-    if not broken and self.req_dat.key[n] and false ~= self.hooks:cache(response) and not self.cache:get(self.req_dat.key[n]) then
-      self.cache:set(self.req_dat.key[n], self.responses[self.req_dat.num[n]], self.req_dat.ttl[n])
-      -- Store keys to tag sets
-      if self.req_dat.tags[n] then
-        for _, tag in ipairs(self.req_dat.tags[n]) do
-          self.cache:sadd(tag, self.req_dat.key[n])
-        end
-      end
     end
   end
 

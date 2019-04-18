@@ -5,15 +5,12 @@ local Lugate = require ".lugate"
 local lugate = Lugate:init({
     json = require "rapidjson",
     ngx = ngx,
-    cache = { 'redis', '127.0.0.1', 6379, 13 }, -- redis, host, port, db num
     routes = {
         ['v1%.([^%.]+).*'] = '/v1', -- v1.math.subtract -> /v1.math
         ['v2%.([^%.]+).*'] = '/v2', -- v2.math.addition -> /v2.math
     },
     hooks = {
-        cache = function(lugate, response)
-            return (response.header['Cache-control'] == 'no-cache') or false
-        end
+
     },
     debug = true,
 
