@@ -38,18 +38,6 @@ function Request:is_valid()
   return self.valid
 end
 
---- Check if request is a valid Lugate proxy call over JSON-RPC 2.0
--- @param[type=table] data Decoded request body
--- @return[type=boolean]
-function Request:is_proxy_call()
-  if nil == self.proxy_call then
-    self.proxy_call = self:is_valid()
-      and true or false
-  end
-
-  return self.proxy_call
-end
-
 --- Get JSON-RPC version
 -- @return[type=string]
 function Request:get_jsonrpc()
@@ -65,7 +53,7 @@ end
 --- Get request params (search for nested params)
 -- @return[type=table]
 function Request:get_params()
-  return self:is_proxy_call() and self.data.params.params or self.data.params
+  return self:is_valid() and self.data.params.params or self.data.params
 end
 
 --- Get request id
@@ -77,14 +65,14 @@ end
 --- Get request route
 -- @return[type=string]
 function Request:get_route()
-  return self:is_proxy_call() and self.data.method or nil
+  return self:is_valid() and self.data.method or nil
 end
 
 --- Get uri passing for request data
 -- @return[type=string] Request uri
 -- @return[type=string] Error
 function Request:get_uri()
-  if self:is_proxy_call() then
+  if self:is_valid() then
     for route, uri in pairs(self.lugate.routes) do
       local uri, matches = string.gsub(self:get_route(), route, uri);
       if matches >= 1 then

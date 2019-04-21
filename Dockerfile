@@ -1,31 +1,14 @@
-FROM alpine:3.6
-# Update apk index.
-RUN apk update
+FROM openresty/openresty:alpine-fat
 
-RUN apk add --no-cache nginx-mod-http-lua lua-dev git bash unzip build-base  curl cmake openssl
+RUN apk add --no-cache --virtual .build-deps \
+ outils-md5 \
+ cmake \
+ &&  /usr/local/openresty/luajit/bin/luarocks install lua-resty-jwt \
+ && apk del .build-deps
 
-# Build Luarocks.
-RUN cd /tmp && \
-    git clone https://github.com/keplerproject/luarocks.git --branch v3.0.4 --single-branch && \
-    cd luarocks && \
-    sh ./configure && \
-    make build install && \
-    cd && \
-rm -rf /tmp/luarocks && \
-rm -rf ~/.cache/luarocks
-
-# Delete default config
-RUN /usr/local/bin/luarocks install rapidjson
-RUN /usr/local/bin/luarocks install redis-lua
+RUN mkdir /var/log/nginx
 
 COPY ./docker/nginx/lugate /etc/nginx/lugate
-
-# Create folder for PID file
-RUN mkdir -p /run/nginx
-
-# Add our nginx conf
-COPY ./docker/nginx/server.conf /etc/nginx/conf.d/nginx.conf
-COPY ./docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./docker/nginx/server.conf /etc/nginx/conf.d/default.conf
+COPY ./docker/nginx/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY ./docker/nginx/gate.lua /etc/nginx/gate.lua
-
-CMD ["nginx"]

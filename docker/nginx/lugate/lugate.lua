@@ -235,7 +235,7 @@ end
 function Lugate:attach_request(i, request, ngx_requests)
   self:write_log(request:get_body(), Lugate.REQ_PREF)
 
-  if request:is_proxy_call() then
+  if request:is_valid() then
     local req, err = request:get_ngx_request()
     if req then
       table.insert(ngx_requests, req)
@@ -246,7 +246,7 @@ function Lugate:attach_request(i, request, ngx_requests)
     else
       self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
     end
-  elseif not request:is_proxy_call() then
+  elseif not request:is_valid() then
     self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_INVALID_PROXY_CALL, nil, request:get_body(), request:get_id()))
   else
     self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_PARSE_ERROR, nil, request:get_body(), request:get_id()))
