@@ -7,7 +7,7 @@
 -- @author Ivan Zinovyev <vanyazin@gmail.com>
 -- @license MIT
 
---- Request obeject
+--- Request object
 local Request = {}
 
 --- Create new request
@@ -73,10 +73,10 @@ end
 -- @return[type=string] Error
 function Request:get_uri()
   if self:is_valid() then
-    for route, uri in pairs(self.lugate.routes) do
-      local uri, matches = string.gsub(self:get_route(), route, uri);
+    for _, route in ipairs(self.lugate.routes) do
+      local addr, matches = string.gsub(self:get_route(), route['rule'], route['addr']);
       if matches >= 1 then
-        return uri, nil
+        return addr, nil
       end
     end
   end
