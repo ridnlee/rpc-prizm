@@ -12,15 +12,15 @@ local Request = {}
 
 --- Create new request
 -- param[type=table] data Request data
--- param[type=table] tmp Lugate instance
+-- param[type=table] json_encoder json encoder instance
 -- return[type=table] New request instance
-function Request:new(data, lugate)
+function Request:new(data, json_encoder)
   assert(type(data) == "table", "Parameter 'data' is required and should be a table!")
-  assert(type(lugate) == "table", "Parameter 'tmp' is required and should be a table!")
+  assert(type(json_encoder) == "table", "Parameter 'json_encoder' is required and should be a table!")
 
   local request = setmetatable({}, Request)
   self.__index = self
-  request.lugate = lugate
+  request.json_encoder = json_encoder
   request.data = data
 
   return request
@@ -82,7 +82,7 @@ end
 --- Get request body
 -- @return[type=string] Json array
 function Request:get_body()
-  return self.lugate.json.encode(self:get_data())
+  return self.json_encoder.encode(self:get_data())
 end
 
 --- Build a request in format acceptable by nginx

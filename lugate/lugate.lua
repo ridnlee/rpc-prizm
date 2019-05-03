@@ -163,10 +163,10 @@ function Lugate:get_requests()
     local data = self:get_data()
     if self:is_batch() then
       for _, rdata in ipairs(data) do
-        table.insert(self.requests, Request:new(rdata, self))
+        table.insert(self.requests, Request:new(rdata, self.json))
       end
     else
-      table.insert(self.requests, Request:new(data, self))
+      table.insert(self.requests, Request:new(data, self.json))
     end
   end
 
