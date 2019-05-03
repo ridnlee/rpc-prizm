@@ -15,6 +15,6 @@ docker run -v /var/dev/other/apigate/lugate:/etc/nginx/lugate  --network host  -
 
 ###Test
 ```
- docker run -v /var/dev/other/apigate/lugate:/etc/nginx/lugate -v /var/dev/other/apigate/spec:/etc/nginx/spec  --network host  luagate_test busted /etc/nginx/spec/lugate_spec.lua
+ docker run -v /var/dev/other/apigate/lugate:/etc/nginx/lugate -v /var/dev/other/apigate/spec:/etc/nginx/spec  --network host  luagate_test busted /etc/nginx/spec/
  
 ```

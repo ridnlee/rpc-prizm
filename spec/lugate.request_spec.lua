@@ -1,6 +1,6 @@
-package.path = package.path .. ";../lugate/?.lua"
+package.path = "/etc/nginx/lugate/?.lua;" .. package.path
 -- Load the module
-local Request = dofile("./request.lua")
+local Request = require "request"
 
 describe("Check request constructor", function()
   it("Request should be initialized", function()
@@ -13,46 +13,18 @@ describe("Check request constructor", function()
     end, "Parameter 'data' is required and should be a table!")
   end)
 
-  it("Error should be thrown if lugate is not provided", function()
+  it("Error should be thrown if json_encoder is not provided", function()
     assert.has_error(function()
       Request:new({}, nil)
-    end, "Parameter 'lugate' is required and should be a table!")
+    end, "Parameter 'json_encoder' is required and should be a table!")
   end)
 
-  it("The lugate instance should be a table", function()
+  it("The request instance should be a table", function()
     assert.is_table(Request:new({}, {}))
   end)
 end)
 
 describe("Check request validation", function()
-
-  it("Request should be cachable if ttl and key are given", function()
-    local request1 = Request:new({ params = { cache = { key = 'foo', ttl = 123 } } }, {})
-    assert.is_true(request1:is_cachable())
-
-    local request2 = Request:new({ params = { cache = { key = 'foo', ttl = 0 } } }, {})
-    assert.is_true(request2:is_cachable())
-
-    local request3 = Request:new({ params = { cache = { key = 'foo', ttl = 0, tags = {'foo', 'bar'} } } }, {})
-    assert.is_true(request3:is_cachable())
-  end)
-
-  it("Request should NOT be cachable if ttl or key are nil", function()
-    local request1 = Request:new({ params = { key = 'foo' } }, {})
-    assert.is_false(request1:is_cachable())
-
-    local request2 = Request:new({ params = { ttl = 123 } }, {})
-    assert.is_false(request2:is_cachable())
-
-    local request3 = Request:new({ params = { ttl = false } }, {})
-    assert.is_false(request3:is_cachable())
-
-    local request4 = Request:new({ params = { ttl = false } }, {})
-    assert.is_false(request4:is_cachable())
-
-    local request5 = Request:new({ params = { cache = { ttl = false, tags = {'foo', 'bar'} } } }, {})
-    assert.is_false(request5:is_cachable())
-  end)
 
   it("Request should be valid if jsonrpc version and method are provided", function()
     local request = Request:new({ jsonrpc = '2.0', method = 'foo.bar' }, {})
@@ -70,20 +42,11 @@ describe("Check request validation", function()
       method = 'foo.bar',
       params = {
         params = {},
-        route = 'v1.foo.bar'
       }
     }, {})
-    assert.is_true(request:is_proxy_call())
+    assert.is_true(request:is_valid())
   end)
 
-  it("Request should be a invalid proxy call if wrong options are provided", function()
-    local request = Request:new({
-      jsonrpc = '2.0',
-      method = 'foo.bar',
-      params = { foo = "bar" }
-    }, {})
-    assert.is_false(request:is_proxy_call())
-  end)
 end)
 
 describe("Check request params are parsed correctly", function()
@@ -125,75 +88,15 @@ describe("Check request params are parsed correctly", function()
       method = 'method.name',
       params = {
         route = 'v1.method.name',
-        cache = {
-          ttl = false,
-          key = 'd88d8ds00-s',
-          tags = {'foo', 'bar'},
-        },
         params = { one = 1, two = 2 }
       }
     }, {})
-    assert.equal('v1.method.name', request:get_route())
-    assert.equal(false, request:get_ttl())
-    assert.equal('d88d8ds00-s', request:get_key())
-    assert.same({'foo', 'bar'}, request:get_tags())
-  end)
-end)
-
-describe('Check that uri is created correctly', function()
-  local lugate = {
-    routes = {
-      ['^v2%..*'] = '/api/v2/'
-    },
-    json = require "rapidjson"
-  }
-  it("Should provide a correct uri if route matches", function()
-    local data = {
-      jsonrpc = '2.2',
-      method = 'method.name',
-      params = {
-        route = 'v2.method.name',
-        cache = {
-          ttl = false,
-          key = 'd88d8ds00-s',
-        },
-        params = { one = 1, two = 2 }
-      },
-      id = 1,
-    }
-    local request = Request:new(data, lugate)
-    local uri, err = request:get_uri()
-    assert.equal('/api/v2/', uri)
-    assert.is_nil(err)
-  end)
-  it("Should not provide a correct uri if the route doesn not match", function()
-    local data = {
-      jsonrpc = '2.2',
-      method = 'method.name',
-      params = {
-        route = 'v1.method.name',
-        cache = {
-          ttl = false,
-          key = 'd88d8ds00-s',
-        },
-        params = { one = 1, two = 2 }
-      },
-      id = 1,
-    }
-    local request = Request:new(data, lugate)
-    local uri, err = request:get_uri()
-    assert.equal('Failed to bind the route', err)
-    assert.is_nil(uri)
+    assert.equal('method.name', request:get_route())
   end)
 end)
 
 describe("Check data and body builders", function()
-  local lugate = {
-    routes = {
-      ['^v2%..*'] = '/api/v2/'
-    },
-    json = require "rapidjson"
-  }
+  local json_encoder = require "cjson"
 
   describe("Check a positive case", function()
     local data = {
@@ -209,7 +112,7 @@ describe("Check data and body builders", function()
       },
       id = 1,
     }
-    local request = Request:new(data, lugate)
+    local request = Request:new(data, json_encoder)
     local canonical_ngx_request = { '/api/v2/', { method = 8, body = '{"jsonrpc":"2.2","params":{"two":2,"one":1},"id":1,"method":"method.name"}' } }
 
     it("Should provide a valid data table if the data is valid", function()
@@ -226,11 +129,11 @@ describe("Check data and body builders", function()
 
     it("Should provide a valid ngx data table if the data is valid", function()
       assert.equal(canonical_ngx_request[1],
-        request:get_ngx_request()[1])
+        request:get_ngx_request('/api/v2/')[1])
       assert.equal(canonical_ngx_request[2].method,
-        request:get_ngx_request()[2].method)
-      assert.are_same(lugate.json.decode(canonical_ngx_request[2].body),
-        lugate.json.decode(request:get_ngx_request()[2].body))
+        request:get_ngx_request('/api/v2/')[2].method)
+      assert.are_same(json_encoder.decode(canonical_ngx_request[2].body),
+        json_encoder.decode(request:get_ngx_request('/api/v2/')[2].body))
     end)
 
     it("Should provide a valid data table if the data is valid", function()
@@ -241,7 +144,7 @@ describe("Check data and body builders", function()
 
   describe("Check a negative case", function()
     local data = {}
-    local request = Request:new(data, lugate)
+    local request = Request:new(data, json_encoder)
 
     it("Should NOT provide a valid data table if the data is invalid", function()
       assert.are_not_same({ id = 1, jsonrpc = '2.0', method = 'method.name', params = { one = 1, two = 2 } },
