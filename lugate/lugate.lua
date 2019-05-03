@@ -32,7 +32,7 @@ local Lugate = {
 Lugate.HTTP_POST = 8
 
 --- Create new Lugate instance
--- @param[type=table] config Table of configuration options: body for raw request body and routes for routing map config
+-- @param[type=table] config Table of configuration options
 -- @return[type=table] The new instance of Lugate
 function Lugate:new(config)
   config.hooks = config.hooks or {}
@@ -56,7 +56,7 @@ function Lugate:new(config)
   lugate.hooks = config.hooks
   lugate.ngx = config.ngx
   lugate.json = config.json
-  lugate.routes = config.routes or {}
+  lugate.router = config.router
   lugate.req_dat = { num = {}, ids = {} }
   lugate.responses = {}
   lugate.context = {}
@@ -66,7 +66,7 @@ function Lugate:new(config)
 end
 
 --- Create new Lugate instance. Initialize ngx dependent properties
--- @param[type=table] config Table of configuration options: body for raw request body and routes for routing map config
+-- @param[type=table] config Table of configuration options
 -- @return[type=table] The new instance of Lugate
 function Lugate:init(config)
   -- Create new tmp instance
@@ -87,17 +87,6 @@ function Lugate:init(config)
   end
 
   return lugate
-end
-
---- Format error message
--- @param[type=string] message Log text
--- @param[type=string] comment Log note
--- @return[type=string]
-function Lugate:write_log(message, comment)
-  if self.debug then
-      comment = comment and '(' .. comment .. ')' or ''
-      self.ngx.log(self.ngx.ERR, string.format(Lugate.DBG_MSG, comment, message))
-  end
 end
 
 --- Get a proper formated json error
@@ -221,25 +210,28 @@ end
 -- @return[type=boolean]
 function Lugate:attach_request(i, request, ngx_requests)
   self:write_log(request:get_body(), Lugate.REQ_PREF)
-
-  if request:is_valid() then
-    local req, err = request:get_ngx_request()
-
-    local pre_request_result = self.hooks.pre_request(self, request)
-
-    if type(pre_request_result) == 'string' then
-      self.responses[i] = self:clean_response(pre_request_result)
-    elseif req then
-      table.insert(ngx_requests, req)
-      local req_count = #ngx_requests
-
-      self.req_dat.num[req_count] = i
-      self.req_dat.ids[req_count] = request:get_id()
-    else
-      self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
-    end
-  else
+  if not request:is_valid() then
     self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()))
+    return true
+  end
+
+  local pre_request_result = self.hooks.pre_request(self, request)
+  if type(pre_request_result) == 'string' then
+    self.responses[i] = self:clean_response(pre_request_result)
+    return true
+  end
+
+  local addr, err = self.router:get_address(request:get_route())
+
+  if addr then
+    local req = request:get_ngx_request(addr)
+    table.insert(ngx_requests, req)
+    local req_count = #ngx_requests
+
+    self.req_dat.num[req_count] = i
+    self.req_dat.ids[req_count] = request:get_id()
+  else
+    self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
   end
 
   return true
@@ -265,7 +257,6 @@ function Lugate:handle_response(n, response)
     -- Quick way to find invalid responses
     local first_char = string.sub(self.responses[self.req_dat.num[n]], 1, 1);
     local last_char = string.sub(self.responses[self.req_dat.num[n]], -1);
-    local broken = false
 
     -- JSON check
     if ('' == self.responses[self.req_dat.num[n]]) or ('{' ~= first_char and '[' ~= first_char) or ('}' ~= last_char and ']' ~= last_char) then
@@ -273,7 +264,6 @@ function Lugate:handle_response(n, response)
       self.responses[self.req_dat.num[n]] = self:clean_response(self:build_json_error(
         Lugate.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, self.req_dat.ids[n]
       ))
-      broken = true
     end
   end
 
@@ -297,6 +287,17 @@ function Lugate:get_result()
   end
 
   return '[' .. table.concat(self.responses, ",") .. ']'
+end
+
+--- Format error message
+-- @param[type=string] message Log text
+-- @param[type=string] comment Log note
+-- @return[type=string]
+function Lugate:write_log(message, comment)
+  if self.debug then
+    comment = comment and '(' .. comment .. ')' or ''
+    self.ngx.log(self.ngx.ERR, string.format(Lugate.DBG_MSG, comment, message))
+  end
 end
 
 --- Print all responses and exit

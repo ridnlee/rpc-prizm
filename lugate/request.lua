@@ -68,22 +68,6 @@ function Request:get_route()
   return self:is_valid() and self.data.method or nil
 end
 
---- Get uri passing for request data
--- @return[type=string] Request uri
--- @return[type=string] Error
-function Request:get_uri()
-  if self:is_valid() then
-    for _, route in ipairs(self.lugate.routes) do
-      local addr, matches = string.gsub(self:get_route(), route['rule'], route['addr']);
-      if matches >= 1 then
-        return addr, nil
-      end
-    end
-  end
-
-  return nil, 'Failed to bind the route'
-end
-
 --- Get request data table
 -- @return[type=table]
 function Request:get_data()
@@ -102,16 +86,10 @@ function Request:get_body()
 end
 
 --- Build a request in format acceptable by nginx
--- @param[type=table] data Decoded requets body
--- @return[type=string] Uri
--- @return[type=string] Error message
-function Request:get_ngx_request()
-  local uri, err = self:get_uri()
-  if uri then
-    return { self:get_uri(), { method = 8, body = self:get_body() } }, nil
-  end
-
-  return nil, err
+-- @param[type=table] uri request uri
+-- @return[type=table] ngx request
+function Request:get_ngx_request(uri)
+    return { uri, { method = 8, body = self:get_body() } }
 end
 
 return Request
