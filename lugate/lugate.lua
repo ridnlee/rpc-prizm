@@ -39,13 +39,11 @@ function Lugate:new(config)
   config.hooks.pre = config.hooks.pre or function() end
   config.hooks.pre_request = config.hooks.pre_request or function() end
   config.hooks.post = config.hooks.post or function() end
-  config.debug = config.debug or false
 
   assert(type(config.ngx) == "table", "Parameter 'ngx' is required and should be a table!")
   assert(type(config.json) == "table", "Parameter 'json' is required and should be a table!")
   assert(type(config.hooks.pre) == "function", "Parameter 'pre' is required and should be a function!")
   assert(type(config.hooks.post) == "function", "Parameter 'post' is required and should be a function!")
-  assert(type(config.debug) == "boolean", "Parameter 'debug' is required and should be a function!")
 
   -- Define metatable
   local lugate = setmetatable({}, Lugate)
@@ -57,10 +55,10 @@ function Lugate:new(config)
   lugate.ngx = config.ngx
   lugate.json = config.json
   lugate.router = config.router
+  lugate.logger = config.logger
   lugate.req_dat = { num = {}, ids = {} }
   lugate.responses = {}
   lugate.context = {}
-  lugate.debug = config.debug
 
   return lugate
 end
@@ -209,7 +207,7 @@ end
 -- @param[type=table] ngx_requests Table of nginx requests
 -- @return[type=boolean]
 function Lugate:attach_request(i, request, ngx_requests)
-  self:write_log(request:get_body(), Lugate.REQ_PREF)
+  self.logger:write_log(request:get_body(), Lugate.REQ_PREF)
   if not request:is_valid() then
     self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()))
     return true
@@ -268,7 +266,7 @@ function Lugate:handle_response(n, response)
   end
 
   -- Push to log
-  self:write_log(self.responses[self.req_dat.num[n]], Lugate.RESP_PREF)
+  self.logger:write_log(self.responses[self.req_dat.num[n]], Lugate.RESP_PREF)
 
   return true
 end
@@ -287,17 +285,6 @@ function Lugate:get_result()
   end
 
   return '[' .. table.concat(self.responses, ",") .. ']'
-end
-
---- Format error message
--- @param[type=string] message Log text
--- @param[type=string] comment Log note
--- @return[type=string]
-function Lugate:write_log(message, comment)
-  if self.debug then
-    comment = comment and '(' .. comment .. ')' or ''
-    self.ngx.log(self.ngx.ERR, string.format(Lugate.DBG_MSG, comment, message))
-  end
 end
 
 --- Print all responses and exit

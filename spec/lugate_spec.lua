@@ -2,6 +2,7 @@ package.path = "/etc/nginx/lugate/?.lua;" .. package.path
 -- Load the module
 local Lugate = require "lugate"
 local Router = require "router"
+local Logger = require "logger"
 
 describe("Check lugate constructor", function()
   it("Lugate should be initialized", function()
@@ -166,7 +167,7 @@ end)
 
 describe("Check response validation", function ()
   local ngx = { req = {}, HTTP_OK = 200, HTTP_INTERNAL_SERVER_ERROR = 500 }
-  local lugate = Lugate:new({ ngx = ngx, json = require "cjson" })
+  local lugate = Lugate:new({ ngx = ngx, logger=Logger:new(ngx,false), json = require "cjson" })
   it("Should provide a valid HTTP error status", function()
     local bad_response = {
       status = 504,
@@ -288,6 +289,7 @@ describe("Check request validation", function()
   local lugate = Lugate:new({
     ngx = ngx,
     json = require "cjson",
+    logger=Logger:new(ngx,false),
     router = Router:new({
         {rule='s1%.([^%.]+).*', addr='/serv1'},
         {rule='s2%.([^%.]+).*', addr='/serv2'},
@@ -331,6 +333,7 @@ describe("Check one-request batch processing", function()
   local lugate = Lugate:new({
     ngx = ngx,
     json = require "cjson",
+    logger=Logger:new(ngx,false),
     router = Router:new({
         {rule='v1%.([^%.]+).*', addr='/serv1'},
         {rule='v2%.([^%.]+).*', addr='/serv2'},
