@@ -85,11 +85,4 @@ function Request:get_body()
   return self.json_encoder.encode(self:get_data())
 end
 
---- Build a request in format acceptable by nginx
--- @param[type=table] uri request uri
--- @return[type=table] ngx request
-function Request:get_ngx_request(uri)
-    return { uri, { method = 8, body = self:get_body() } }
-end
-
 return Request

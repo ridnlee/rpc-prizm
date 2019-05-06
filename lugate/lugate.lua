@@ -56,9 +56,9 @@ function Lugate:new(config)
   lugate.json = config.json
   lugate.router = config.router
   lugate.logger = config.logger
-  lugate.req_dat = { num = {}, ids = {} }
   lugate.responses = {}
   lugate.context = {}
+  lugate.request_groups = {}
 
   return lugate
 end
@@ -180,16 +180,17 @@ function Lugate:run()
   end
 
   -- Loop requests
-  local ngx_requests = {}
-  for i, request in ipairs(self:get_requests()) do
-    self:attach_request(i, request, ngx_requests)
+  local map_requests = {}
+  for _, request in ipairs(self:get_requests()) do
+    self:attach_request(request, map_requests)
   end
 
   -- Send multi requst and get multi response
-  if #ngx_requests > 0 then
+  if  next(map_requests) ~= nil then
+    local ngx_requests = self:get_ngx_requests(map_requests)
     local responses = { self.ngx.location.capture_multi(ngx_requests) }
-    for n, response in ipairs(responses) do
-      self:handle_response(n, response)
+    for i, response in ipairs(responses) do
+      self:handle_response(i, response)
     end
   end
 
@@ -206,67 +207,93 @@ end
 -- @param[type=table] request Request object
 -- @param[type=table] ngx_requests Table of nginx requests
 -- @return[type=boolean]
-function Lugate:attach_request(i, request, ngx_requests)
+function Lugate:attach_request(request, map_requests)
   self.logger:write_log(request:get_body(), Lugate.REQ_PREF)
   if not request:is_valid() then
-    self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()))
+    table.insert(self.responses, self:build_json_error(Lugate.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()));
     return true
   end
 
   local pre_request_result = self.hooks.pre_request(self, request)
   if type(pre_request_result) == 'string' then
-    self.responses[i] = self:clean_response(pre_request_result)
+    table.insert(self.responses, pre_request_result)
     return true
   end
 
   local addr, err = self.router:get_address(request:get_route())
-
   if addr then
-    local req = request:get_ngx_request(addr)
-    table.insert(ngx_requests, req)
-    local req_count = #ngx_requests
-
-    self.req_dat.num[req_count] = i
-    self.req_dat.ids[req_count] = request:get_id()
+    map_requests[addr] = map_requests[addr] or {}
+    table.insert(map_requests[addr], request)
   else
-    self.responses[i] = self:clean_response(self:build_json_error(Lugate.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
+    table.insert(self.responses,  self:build_json_error(Lugate.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
   end
 
+
   return true
+end
+
+---
+function Lugate:get_ngx_requests(map_requests)
+  local ngx_requests = {}
+  self.request_groups = {}
+  for addr,requests in pairs(map_requests) do
+    table.insert(self.request_groups, {addr=addr, reqs=requests})
+    table.insert(ngx_requests, self:get_ngx_request(addr, requests))
+  end
+
+  return ngx_requests;
+end
+
+--- Build a request in format acceptable by nginx
+-- @param[type=table] uri request uri
+-- @return[type=table] requests list of rpc requests
+function Lugate:get_ngx_request(addr, requests)
+  local rpc_requests = {}
+  for _,request in ipairs(requests) do
+    table.insert(rpc_requests, request:get_body())
+  end
+
+  local body = ''
+  if #requests > 1 then
+    body = '[' .. table.concat(rpc_requests, ",") .. ']'
+  else
+    body = rpc_requests[1]
+  end
+  return { addr, { method = 8, body = body } }
 end
 
 --- Handle every single response
 -- @param[type=number] n Response number
 -- @param[type=table] response Response object
 -- @return[type=boolean]
-function Lugate:handle_response(n, response)
+function Lugate:handle_response(i, response)
   -- HTTP code <> 200
   if self.ngx.HTTP_OK ~= response.status then
     local response_msg = HttpStatuses[response.status] or 'Unknown error'
     local data = self.ngx.HTTP_INTERNAL_SERVER_ERROR == response.status and self:clean_response(response.body) or nil
-    self.responses[self.req_dat.num[n]] = self:build_json_error(
-      response.status, response_msg, data, self.req_dat.ids[n]
-    )
-
+    for _,request in ipairs(self.request_groups[i]['reqs']) do
+      table.insert(self.responses,  self:build_json_error(response.status, response_msg, data, request:get_id()))
+    end
   -- HTTP code == 200
   else
-    self.responses[self.req_dat.num[n]] = self:clean_response(response)
-
+    local resp_body = self:clean_response(response)
     -- Quick way to find invalid responses
-    local first_char = string.sub(self.responses[self.req_dat.num[n]], 1, 1);
-    local last_char = string.sub(self.responses[self.req_dat.num[n]], -1);
+    local first_char = string.sub(resp_body, 1, 1);
+    local last_char = string.sub(resp_body, -1);
 
     -- JSON check
-    if ('' == self.responses[self.req_dat.num[n]]) or ('{' ~= first_char and '[' ~= first_char) or ('}' ~= last_char and ']' ~= last_char) then
-      -- Process empty or broken responses
-      self.responses[self.req_dat.num[n]] = self:clean_response(self:build_json_error(
-        Lugate.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, self.req_dat.ids[n]
-      ))
+    if ('' == resp_body) or ('{' ~= first_char and '[' ~= first_char) or ('}' ~= last_char and ']' ~= last_char) then
+      for _, request in ipairs(self.request_groups[i]['reqs']) do
+        table.insert(self.responses,  self:build_json_error(
+                Lugate.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, request:get_id()
+        ))
+      end
+    else
+      table.insert(self.responses, self:trim_brackets(resp_body))
+      -- Push to log
+      self.logger:write_log(self:trim_brackets(resp_body), Lugate.RESP_PREF)
     end
   end
-
-  -- Push to log
-  self.logger:write_log(self.responses[self.req_dat.num[n]], Lugate.RESP_PREF)
 
   return true
 end
@@ -275,6 +302,13 @@ end
 function Lugate:clean_response(response)
   local response_body = response.body or response
   return response_body:match'^()%s*$' and '' or response_body:match'^%s*(.*%S)'
+end
+
+---
+function Lugate:trim_brackets(str)
+  local _, i1 = string.find(str,'^%[*')
+  local i2 = string.find(str,'%]*$')
+  return string.sub(str, i1 + 1, i2 - 1)
 end
 
 --- Get responses as a string
