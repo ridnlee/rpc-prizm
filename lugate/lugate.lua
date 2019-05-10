@@ -10,19 +10,13 @@
 --- Request factory
 local Request = require ".request"
 
+local ResponseBuilder = require ".response_builder"
+
 --- HTTP Statuses
 local HttpStatuses = require '.http_statuses'
 
 --- The lua gateway class definition
 local Lugate = {
-  ERR_PARSE_ERROR = -32700, -- Error code for "Parse error" error
-  ERR_INVALID_REQUEST = -32600, -- Error code for "Invalid request" error
-  ERR_METHOD_NOT_FOUND = -32601, -- Error code for "Method not found" error
-  ERR_INVALID_PARAMS = -32602, -- Error code for "Invalid params" error
-  ERR_INTERNAL_ERROR = -32603, -- Error code for "Internal error" error
-  ERR_SERVER_ERROR = -32000, -- Error code for "Server error" error
-  ERR_INVALID_PROXY_CALL = -32098, -- Error code for "Invalid proxy call" error
-  ERR_EMPTY_REQUEST = -32097, -- Error code for "Empty request" error
   VERSION = '0.6.1', -- Current version
   DBG_MSG = 'DBG %s>>%s<<', -- Template for error log
   REQ_PREF = 'REQ', -- Request prefix (used in log message)
@@ -72,7 +66,7 @@ function Lugate:init(config)
 
   -- Check request method
   if 'POST' ~= lugate.ngx.req.get_method() then
-    lugate.ngx.say(lugate:build_json_error(Lugate.ERR_INVALID_REQUEST, 'Only POST requests are allowed'))
+    lugate.ngx.say(ResponseBuilder:build_json_error(ResponseBuilder.ERR_INVALID_REQUEST, 'Only POST requests are allowed'))
     lugate.ngx.exit(lugate.ngx.HTTP_OK)
   end
 
@@ -80,36 +74,11 @@ function Lugate:init(config)
   lugate.ngx.req.read_body() -- explicitly read the req body
 
   if not lugate:is_not_empty() then
-    lugate.ngx.say(lugate:build_json_error(Lugate.ERR_EMPTY_REQUEST))
+    lugate.ngx.say(ResponseBuilder:build_json_error(ResponseBuilder.ERR_EMPTY_REQUEST))
     lugate.ngx.exit(lugate.ngx.HTTP_OK)
   end
 
   return lugate
-end
-
---- Get a proper formated json error
--- @param[type=int] code Error code
--- @param[type=string] message Error message
--- @param[type=table] data Additional error data
--- @param[type=number] id Request id
--- @return[type=string]
-function Lugate:build_json_error(code, message, data, id)
-  local messages = {
-    [Lugate.ERR_PARSE_ERROR] = 'Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.',
-    [Lugate.ERR_INVALID_REQUEST] = 'The JSON sent is not a valid Request object.',
-    [Lugate.ERR_METHOD_NOT_FOUND] = 'The method does not exist / is not available.',
-    [Lugate.ERR_INVALID_PARAMS] = 'Invalid method parameter(s).',
-    [Lugate.ERR_INTERNAL_ERROR] = 'Internal JSON-RPC error.',
-    [Lugate.ERR_SERVER_ERROR] = 'Server error',
-    [Lugate.ERR_EMPTY_REQUEST] = 'Empty request.',
-  }
---  local code = messages[code] and code or Lugate.ERR_SERVER_ERROR
-  local code = (messages[code] or HttpStatuses[code]) and code or Lugate.ERR_SERVER_ERROR
-  local message = message or messages[code]
-  local data = data and self.json.encode(data) or 'null'
-  local id = id or 'null'
-
-  return '{"jsonrpc":"2.0","error":{"code":' .. tostring(code) .. ',"message":"' .. message .. '","data":' .. data .. '},"id":' .. id .. '}'
 end
 
 --- Check if request is empty
@@ -210,7 +179,7 @@ end
 function Lugate:attach_request(request, map_requests)
   self.logger:write_log(request:get_body(), Lugate.REQ_PREF)
   if not request:is_valid() then
-    table.insert(self.responses, self:build_json_error(Lugate.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()));
+    table.insert(self.responses, ResponseBuilder:build_json_error(ResponseBuilder.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()));
     return true
   end
 
@@ -225,7 +194,7 @@ function Lugate:attach_request(request, map_requests)
     map_requests[addr] = map_requests[addr] or {}
     table.insert(map_requests[addr], request)
   else
-    table.insert(self.responses,  self:build_json_error(Lugate.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
+    table.insert(self.responses,  ResponseBuilder:build_json_error(ResponseBuilder.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
   end
 
 
@@ -272,11 +241,11 @@ function Lugate:handle_response(i, response)
     local response_msg = HttpStatuses[response.status] or 'Unknown error'
     local data = self.ngx.HTTP_INTERNAL_SERVER_ERROR == response.status and self:clean_response(response.body) or nil
     for _,request in ipairs(self.request_groups[i]['reqs']) do
-      table.insert(self.responses,  self:build_json_error(response.status, response_msg, data, request:get_id()))
+      table.insert(self.responses,  ResponseBuilder:build_json_error(response.status, response_msg, data, request:get_id()))
     end
   -- HTTP code == 200
   else
-    local resp_body = self:clean_response(response)
+    local resp_body = self:clean_response(response.body)
     -- Quick way to find invalid responses
     local first_char = string.sub(resp_body, 1, 1);
     local last_char = string.sub(resp_body, -1);
@@ -284,8 +253,8 @@ function Lugate:handle_response(i, response)
     -- JSON check
     if ('' == resp_body) or ('{' ~= first_char and '[' ~= first_char) or ('}' ~= last_char and ']' ~= last_char) then
       for _, request in ipairs(self.request_groups[i]['reqs']) do
-        table.insert(self.responses,  self:build_json_error(
-                Lugate.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, request:get_id()
+        table.insert(self.responses,  ResponseBuilder:build_json_error(
+                ResponseBuilder.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, request:get_id()
         ))
       end
     else
