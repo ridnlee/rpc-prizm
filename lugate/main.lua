@@ -1,8 +1,9 @@
--- Print responses out -- Load lugate module
+-- Load modules
 local Lugate = require ".lugate"
 local Router = require ".router"
 local Logger = require ".logger"
 local Jwt = require "resty.jwt"
+local Proxy = require ".proxy"
 
 local jwt_key = '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnzyis1ZjfNB0bBgKFMSv\nvkTtwlvBsaJq7S5wA+kzeVOVpVWwkWdVha4s38XM/pa/yr47av7+z3VTmvDRyAHc\naT92whREFpLv9cj5lTeJSibyr/Mrm/YtjCZVWgaOYIhwrXwKLqPr/11inWsAkfIy\ntvHWTxZYEcXLgAXFuUuaS3uF9gEiNQwzGTU1v0FqkqTBr4B8nW3HCN47XUu0t8Y0\ne+lf4s4OxQawWD79J9/5d3Ry0vbV3Am1FtGJiJvOwRsIfVChDpYStTcHTCMqtvWb\nV6L11BWkpzGXSW4Hv43qa+GSYOD2QU68Mb59oSk2OB+BtOLpJofmbGEGgvmwyCI9\nMwIDAQAB\n-----END PUBLIC KEY-----'
 
@@ -14,12 +15,15 @@ local router = Router:new({
 
 local logger = Logger:new(ngx, true)
 
+local proxy = Proxy:new(ngx, logger)
+
 -- Get new tmp instance
 local lugate = Lugate:init({
     json = require "cjson",
     ngx = ngx,
     router = router,
     logger = logger,
+    proxy = proxy,
     hooks = {
         pre = function (gate)
             local auth_header = ngx.var.http_Authorization
