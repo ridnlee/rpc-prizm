@@ -165,21 +165,21 @@ function Lugate:prepare_map_requests(requests)
 
     for _, request in ipairs(requests) do
         self.logger:write_log(request:get_body(), Lugate.REQ_PREF)
-        if not request:is_valid() then
-            table.insert(self.responses, ResponseBuilder:build_json_error(ResponseBuilder.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()));
-        end
-
-        local pre_request_result = self.hooks.pre_request(self, request)
-        if type(pre_request_result) == 'string' then
-            table.insert(self.responses, pre_request_result)
-        end
-
-        local addr, err = self.router:get_address(request:get_route())
-        if addr then
-            map_requests[addr] = map_requests[addr] or {}
-            table.insert(map_requests[addr], request)
+        if request:is_valid() then
+            local pre_request_result = self.hooks.pre_request(self, request)
+            if type(pre_request_result) == 'string' then
+                table.insert(self.responses, pre_request_result)
+            else
+                local addr, err = self.router:get_address(request:get_route())
+                if addr then
+                    map_requests[addr] = map_requests[addr] or {}
+                    table.insert(map_requests[addr], request)
+                else
+                    table.insert(self.responses,  ResponseBuilder:build_json_error(ResponseBuilder.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
+                end
+            end
         else
-            table.insert(self.responses,  ResponseBuilder:build_json_error(ResponseBuilder.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
+            table.insert(self.responses, ResponseBuilder:build_json_error(ResponseBuilder.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()));
         end
     end
 
