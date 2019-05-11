@@ -25,39 +25,38 @@ local lugate = Lugate:init({
     logger = logger,
     proxy = proxy,
     hooks = {
-        pre = function (gate)
+        pre = function ()
             local auth_header = ngx.var.http_Authorization
             local token = nil
             if auth_header then
                 _, _, token = string.find(auth_header, "Bearer%s+(.+)")
             end
 
-            gate.context["jwt_valid"] = true
+            ngx.ctx.jwt_valid = true
             if token == nil then
-                gate.context["jwt_valid"] = false
+                ngx.ctx.jwt_valid = false
             else
                 local validators = require "resty.jwt-validators"
                 local claim_spec = {
                     validators.set_system_leeway(15), -- time in seconds
                     exp = validators.is_not_expired(),
                     iat = validators.is_not_before(),
-                    -- iss = validators.equals_any_of({"am.ru", "youla.io", "youla.and", "youla.ios"}),
+                    -- iss = validators.equals_any_of({"example.com"}),
                 }
 
                 local jwt_obj = Jwt:verify(jwt_key, token, claim_spec)
                 if not jwt_obj["verified"] then
-                    gate.context["jwt_valid"] = false
+                    ngx.ctx.jwt_valid = false
                 end
             end
 
-            --ngx.header.jwt_value = tostring(gate.context["jwt_valid"])
         end,
 
-        pre_request = function (gate, request)
+        pre_request = function (request)
             local auth = {
-                ['v1.substract'] = true
+                ['v2.substract'] = true
             }
-            if not gate.context["jwt_valid"] and auth[request:get_route()] then
+            if not ngx.ctx.jwt_valid and auth[request:get_route()] then
                 return '{"jsonrpc": "2.0","id": ' .. request:get_id() .. ',"error": {"code": -32099,"message": "Internal error","data": "Access denied"}}'
             end
             return true

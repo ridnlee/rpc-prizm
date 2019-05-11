@@ -46,7 +46,6 @@ function Lugate:new(config)
   lugate.logger = config.logger
   lugate.proxy = config.proxy
   lugate.responses = {}
-  lugate.context = {}
 
   return lugate
 end
@@ -166,7 +165,7 @@ function Lugate:prepare_map_requests(requests)
     for _, request in ipairs(requests) do
         self.logger:write_log(request:get_body(), Lugate.REQ_PREF)
         if request:is_valid() then
-            local pre_request_result = self.hooks.pre_request(self, request)
+            local pre_request_result = self.hooks.pre_request(request, self)
             if type(pre_request_result) == 'string' then
                 table.insert(self.responses, pre_request_result)
             else
