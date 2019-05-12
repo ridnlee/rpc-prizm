@@ -1,5 +1,3 @@
-local jsonenc = require "cjson"
-
 local ResponseBuilder = {
     ERR_PARSE_ERROR = -32700, -- Error code for "Parse error" error
     ERR_INVALID_REQUEST = -32600, -- Error code for "Invalid request" error
@@ -20,6 +18,15 @@ ResponseBuilder.messages = {
     [ResponseBuilder.ERR_EMPTY_REQUEST] = 'Empty request.',
 }
 
+function ResponseBuilder:new(json)
+    assert(type(json) == "table", "Parameter 'json' is required and should be a table!")
+    local builder = setmetatable({}, ResponseBuilder)
+    self.__index = self
+
+    builder.json = json
+    return builder
+end
+
 --- Get a proper formated json error
 -- @param[type=int] code Error code
 -- @param[type=string] message Error message
@@ -29,7 +36,7 @@ ResponseBuilder.messages = {
 function ResponseBuilder:build_json_error(code, message, data, id)
     local code = self.messages[code] and code or self.ERR_SERVER_ERROR
     local message = message or self.messages[code]
-    local data = data and jsonenc.encode(data) or 'null'
+    local data = data and self.json.encode(data) or 'null'
     local id = id or 'null'
 
     return '{"jsonrpc":"2.0","error":{"code":' .. tostring(code) .. ',"message":"' .. message .. '","data":' .. data .. '},"id":' .. id .. '}'

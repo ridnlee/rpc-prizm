@@ -1,28 +1,22 @@
 ----------------------
--- The tmp module.
--- Lugate is a lua module for building JSON-RPC 2.0 Gateway APIs just inside of your Nginx configuration file.
--- Lugate is meant to be used with [ngx\_http\_lua\_module](https://github.com/openresty/lua-nginx-module) together.
+-- Prizm is meant to be used with [ngx\_http\_lua\_module](https://github.com/openresty/lua-nginx-module) together.
 --
--- @classmod tmp
--- @author Ivan Zinovyev <vanyazin@gmail.com>
 -- @license MIT
 
 --- Request factory
 local Request = require ".request"
 
-local ResponseBuilder = require ".response_builder"
-
 --- The lua gateway class definition
-local Lugate = {
+local Prizm = {
   REQ_PREF = 'REQ', -- Request prefix (used in log message)
 }
 
-Lugate.HTTP_POST = 8
+Prizm.HTTP_POST = 8
 
---- Create new Lugate instance
+--- Create new Gate instance
 -- @param[type=table] config Table of configuration options
--- @return[type=table] The new instance of Lugate
-function Lugate:new(config)
+-- @return[type=table] The new instance of Gate
+function Prizm:new(config)
   config.hooks = config.hooks or {}
   config.hooks.pre = config.hooks.pre or function() end
   config.hooks.pre_request = config.hooks.pre_request or function() end
@@ -30,59 +24,64 @@ function Lugate:new(config)
 
   assert(type(config.ngx) == "table", "Parameter 'ngx' is required and should be a table!")
   assert(type(config.json) == "table", "Parameter 'json' is required and should be a table!")
+  assert(type(config.router) == "table", "Parameter 'router' is required and should be a table!")
+  assert(type(config.logger) == "table", "Parameter 'logger' is required and should be a table!")
+  assert(type(config.proxy) == "table", "Parameter 'proxy' is required and should be a table!")
+  assert(type(config.response_builder) == "table", "Parameter 'response_builder' is required and should be a table!")
   assert(type(config.hooks.pre) == "function", "Parameter 'pre' is required and should be a function!")
   assert(type(config.hooks.post) == "function", "Parameter 'post' is required and should be a function!")
 
   -- Define metatable
-  local lugate = setmetatable({}, Lugate)
+  local prizm = setmetatable({}, Prizm)
   self.__index = self
 
   -- Define services and configs
 
-  lugate.hooks = config.hooks
-  lugate.ngx = config.ngx
-  lugate.json = config.json
-  lugate.router = config.router
-  lugate.logger = config.logger
-  lugate.proxy = config.proxy
-  lugate.responses = {}
+  prizm.hooks = config.hooks
+  prizm.ngx = config.ngx
+  prizm.json = config.json
+  prizm.router = config.router
+  prizm.logger = config.logger
+  prizm.proxy = config.proxy
+  prizm.response_builder = config.response_builder
+  prizm.responses = {}
 
-  return lugate
+  return prizm
 end
 
---- Create new Lugate instance. Initialize ngx dependent properties
+--- Create new Prizm instance. Initialize ngx dependent properties
 -- @param[type=table] config Table of configuration options
--- @return[type=table] The new instance of Lugate
-function Lugate:init(config)
+-- @return[type=table] The new instance of Prizm
+function Prizm:init(config)
   -- Create new tmp instance
-  local lugate = self:new(config)
+  local prizm = self:new(config)
 
   -- Check request method
-  if 'POST' ~= lugate.ngx.req.get_method() then
-    lugate.ngx.say(ResponseBuilder:build_json_error(ResponseBuilder.ERR_INVALID_REQUEST, 'Only POST requests are allowed'))
-    lugate.ngx.exit(lugate.ngx.HTTP_OK)
+  if 'POST' ~= prizm.ngx.req.get_method() then
+    prizm.ngx.say(self.response_builder:build_json_error(self.response_builder.ERR_INVALID_REQUEST, 'Only POST requests are allowed'))
+    prizm.ngx.exit(prizm.ngx.HTTP_OK)
   end
 
   -- Build config
-  lugate.ngx.req.read_body() -- explicitly read the req body
+  prizm.ngx.req.read_body() -- explicitly read the req body
 
-  if not lugate:is_not_empty() then
-    lugate.ngx.say(ResponseBuilder:build_json_error(ResponseBuilder.ERR_EMPTY_REQUEST))
-    lugate.ngx.exit(lugate.ngx.HTTP_OK)
+  if not prizm:is_not_empty() then
+    prizm.ngx.say(self.response_builder:build_json_error(self.response_builder.ERR_EMPTY_REQUEST))
+    prizm.ngx.exit(prizm.ngx.HTTP_OK)
   end
 
-  return lugate
+  return prizm
 end
 
 --- Check if request is empty
 -- @return[type=boolean]
-function Lugate:is_not_empty()
+function Prizm:is_not_empty()
   return self:get_body() ~= '' and true or false
 end
 
 --- Get ngx request body
 -- @return[type=string]
-function Lugate:get_body()
+function Prizm:get_body()
   if not self.body then
     self.body = self.ngx.req and self.ngx.req.get_body_data() or ''
   end
@@ -92,7 +91,7 @@ end
 
 --- Parse raw body
 -- @return[type=table]
-function Lugate:get_data()
+function Prizm:get_data()
   if not self.data then
     self.data = {}
     if self:get_body() then
@@ -106,7 +105,7 @@ end
 
 --- Check if request is a batch
 -- @return[type=boolean]
-function Lugate:is_batch()
+function Prizm:is_batch()
   if not self.batch then
     local data = self:get_data()
     self.batch =  data and data[1] and ('table' == type(data[1])) and true or false
@@ -117,7 +116,7 @@ end
 
 --- Get request collection
 -- @return[type=table] The table of requests
-function Lugate:get_requests()
+function Prizm:get_requests()
   if not self.requests then
     self.requests = {}
     local data = self:get_data()
@@ -135,7 +134,7 @@ end
 
 --- Get request collection prepared for ngx.location.capture_multi call
 -- @return[type=table] The table of requests
-function Lugate:run()
+function Prizm:run()
   -- Execute 'pre' middleware
   if false == self.hooks.pre(self) then
     return ngx.exit(ngx.HTTP_OK)
@@ -159,11 +158,11 @@ function Lugate:run()
 end
 
 ---
-function Lugate:prepare_map_requests(requests)
+function Prizm:prepare_map_requests(requests)
     local map_requests = {}
 
     for _, request in ipairs(requests) do
-        self.logger:write_log(request:get_body(), Lugate.REQ_PREF)
+        self.logger:write_log(request:get_body(), Prizm.REQ_PREF)
         if request:is_valid() then
             local pre_request_result = self.hooks.pre_request(request, self)
             if type(pre_request_result) == 'string' then
@@ -174,11 +173,11 @@ function Lugate:prepare_map_requests(requests)
                     map_requests[addr] = map_requests[addr] or {}
                     table.insert(map_requests[addr], request)
                 else
-                    table.insert(self.responses,  ResponseBuilder:build_json_error(ResponseBuilder.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
+                    table.insert(self.responses,  self.response_builder:build_json_error(self.response_builder.ERR_SERVER_ERROR, err, request:get_body(), request:get_id()))
                 end
             end
         else
-            table.insert(self.responses, ResponseBuilder:build_json_error(ResponseBuilder.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()));
+            table.insert(self.responses, self.response_builder:build_json_error(self.response_builder.ERR_INVALID_REQUEST, nil, request:get_body(), request:get_id()));
         end
     end
 
@@ -187,7 +186,7 @@ end
 
 --- Get responses as a string
 -- @return[type=string]
-function Lugate:get_result()
+function Prizm:get_result()
   if false == self:is_batch() then
     return self.responses[1]
   end
@@ -196,10 +195,10 @@ function Lugate:get_result()
 end
 
 --- Print all responses and exit
-function Lugate:print_responses()
+function Prizm:print_responses()
   ngx.say(self:get_result())
 
   ngx.exit(ngx.HTTP_OK)
 end
 
-return Lugate
+return Prizm

@@ -1,5 +1,3 @@
-local ResponseBuilder = require ".response_builder"
-
 local HttpStatuses = require '.http_statuses'
 
 local Proxy = {
@@ -7,12 +5,13 @@ local Proxy = {
     RESP_PREF = 'RESP', -- Response prefix (used in log message)
 }
 
-function Proxy:new(ngx, logger)
+function Proxy:new(ngx, logger, response_builder)
     local proxy = setmetatable({}, Proxy)
     self.__index = self
 
     proxy.ngx = ngx
     proxy.logger = logger
+    proxy.response_builder = response_builder
 
     return proxy
 
@@ -56,9 +55,9 @@ function Proxy:get_ngx_request(addr, requests)
     return { addr, { method = 8, body = body, args = self.ngx.req.get_uri_args() } }
 end
 
---- Handle every single response
--- @param[type=number] n Response number
--- @param[type=table] response Response object
+--- Handle responses from services
+-- @param[type=table] ngx_responses reponses from services
+-- @param[type=table] request_groups group of requests to services
 -- @return[type=boolean]
 function Proxy:handle_responses(ngx_responses, request_groups)
     local responses = {}
@@ -72,14 +71,14 @@ function Proxy:handle_responses(ngx_responses, request_groups)
             local response_msg = HttpStatuses[response.status] or 'Unknown error'
             local data = resp_body
             for _,request in ipairs(request_groups[i]['reqs']) do
-                table.insert(responses,  ResponseBuilder:build_json_error(
-                        ResponseBuilder.ERR_SERVER_ERROR, response.status .. ' ' .. response_msg, data, request:get_id()
+                table.insert(responses,  self.response_builder:build_json_error(
+                        self.response_builder.ERR_SERVER_ERROR, response.status .. ' ' .. response_msg, data, request:get_id()
                 ))
             end
         else
             for _, request in ipairs(request_groups[i]['reqs']) do
-                table.insert(responses,  ResponseBuilder:build_json_error(
-                        ResponseBuilder.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, request:get_id()
+                table.insert(responses,  self.response_builder:build_json_error(
+                        self.response_builder.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, request:get_id()
                 ))
             end
         end

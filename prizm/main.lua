@@ -1,11 +1,17 @@
 -- Load modules
-local Lugate = require ".lugate"
+local Prizm = require ".prizm"
 local Router = require ".router"
 local Logger = require ".logger"
+local ResponseBuilder = require ".response_builder"
 local Jwt = require "resty.jwt"
 local Proxy = require ".proxy"
+local Json = require "cjson"
 
 local jwt_key = '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnzyis1ZjfNB0bBgKFMSv\nvkTtwlvBsaJq7S5wA+kzeVOVpVWwkWdVha4s38XM/pa/yr47av7+z3VTmvDRyAHc\naT92whREFpLv9cj5lTeJSibyr/Mrm/YtjCZVWgaOYIhwrXwKLqPr/11inWsAkfIy\ntvHWTxZYEcXLgAXFuUuaS3uF9gEiNQwzGTU1v0FqkqTBr4B8nW3HCN47XUu0t8Y0\ne+lf4s4OxQawWD79J9/5d3Ry0vbV3Am1FtGJiJvOwRsIfVChDpYStTcHTCMqtvWb\nV6L11BWkpzGXSW4Hv43qa+GSYOD2QU68Mb59oSk2OB+BtOLpJofmbGEGgvmwyCI9\nMwIDAQAB\n-----END PUBLIC KEY-----'
+
+local auth_methods = {
+    ['v2.substract'] = true
+}
 
 local router = Router:new({
     {rule='v1%.([^%.]+).*', addr='/serv1'},
@@ -17,13 +23,16 @@ local logger = Logger:new(ngx, true)
 
 local proxy = Proxy:new(ngx, logger)
 
+local response_builder = ResponseBuilder:new(Json)
+
 -- Get new tmp instance
-local lugate = Lugate:init({
-    json = require "cjson",
+local prizm = Prizm:init({
+    json = Json,
     ngx = ngx,
     router = router,
     logger = logger,
     proxy = proxy,
+    response_builder = response_builder,
     hooks = {
         pre = function ()
             local auth_header = ngx.var.http_Authorization
@@ -55,10 +64,7 @@ local lugate = Lugate:init({
         end,
 
         pre_request = function (request)
-            local auth = {
-                ['v2.substract'] = true
-            }
-            if not ngx.ctx.jwt_valid and auth[request:get_route()] then
+            if not ngx.ctx.jwt_valid and auth_methods[request:get_route()] then
                 return '{"jsonrpc": "2.0","id": ' .. request:get_id() .. ',"error": {"code": -32099,"message": "Internal error","data": "Access denied"}}'
             end
             return true
@@ -67,5 +73,5 @@ local lugate = Lugate:init({
 })
 
 -- Send multi requst and get multi response
-lugate:run()
-lugate:print_responses()
+prizm:run()
+prizm:print_responses()

@@ -1,4 +1,4 @@
-package.path = "/etc/nginx/lugate/?.lua;" .. package.path
+package.path = "/etc/nginx/prizm/?.lua;" .. package.path
 -- Load the module
 local Request = require "request"
 
@@ -113,7 +113,6 @@ describe("Check data and body builders", function()
       id = 1,
     }
     local request = Request:new(data, json_encoder)
-    local canonical_ngx_request = { '/api/v2/', { method = 8, body = '{"jsonrpc":"2.2","params":{"two":2,"one":1},"id":1,"method":"method.name"}' } }
 
     it("Should provide a valid data table if the data is valid", function()
       assert.are_same({ id = 1, jsonrpc = '2.2', method = 'method.name', params = { one = 1, two = 2 } },
@@ -125,15 +124,6 @@ describe("Check data and body builders", function()
       assert.not_nil(string.find(request:get_body(), '"id":1'))
       assert.not_nil(string.find(request:get_body(), '"method":"method.name"'))
       assert.not_nil(string.find(request:get_body(), '"params":{'))
-    end)
-
-    it("Should provide a valid ngx data table if the data is valid", function()
-      assert.equal(canonical_ngx_request[1],
-        request:get_ngx_request('/api/v2/')[1])
-      assert.equal(canonical_ngx_request[2].method,
-        request:get_ngx_request('/api/v2/')[2].method)
-      assert.are_same(json_encoder.decode(canonical_ngx_request[2].body),
-        json_encoder.decode(request:get_ngx_request('/api/v2/')[2].body))
     end)
 
     it("Should provide a valid data table if the data is valid", function()
