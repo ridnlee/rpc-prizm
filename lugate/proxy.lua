@@ -53,7 +53,7 @@ function Proxy:get_ngx_request(addr, requests)
     else
         body = rpc_requests[1]
     end
-    return { addr, { method = 8, body = body } }
+    return { addr, { method = 8, body = body, args = self.ngx.req.get_uri_args() } }
 end
 
 --- Handle every single response

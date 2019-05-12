@@ -47,6 +47,8 @@ local lugate = Lugate:init({
                 local jwt_obj = Jwt:verify(jwt_key, token, claim_spec)
                 if not jwt_obj["verified"] then
                     ngx.ctx.jwt_valid = false
+                else
+                    --ngx.req.set_header("x-data-user-id", jwt_obj["payload"]["user_id"])
                 end
             end
 
