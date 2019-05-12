@@ -63,36 +63,37 @@ end
 function Proxy:handle_responses(ngx_responses, request_groups)
     local responses = {}
     for i, response in ipairs(ngx_responses) do
-        -- HTTP code <> 200
-        if self.ngx.HTTP_OK ~= response.status then
+        local resp_body = self:clean_response(response.body)
+        if self:is_valid_json(resp_body) then
+            table.insert(responses, self:trim_brackets(resp_body))
+            -- Push to log
+            self.logger:write_log(self:trim_brackets(resp_body), Proxy.RESP_PREF)
+        elseif self.ngx.HTTP_OK ~= response.status then
             local response_msg = HttpStatuses[response.status] or 'Unknown error'
-            local data = self.ngx.HTTP_INTERNAL_SERVER_ERROR == response.status and self:clean_response(response.body) or nil
+            local data = resp_body
             for _,request in ipairs(request_groups[i]['reqs']) do
-                table.insert(responses,  ResponseBuilder:build_json_error(response.status, response_msg, data, request:get_id()))
+                table.insert(responses,  ResponseBuilder:build_json_error(
+                        ResponseBuilder.ERR_SERVER_ERROR, response.status .. ' ' .. response_msg, data, request:get_id()
+                ))
             end
-            -- HTTP code == 200
         else
-            local resp_body = self:clean_response(response.body)
-            -- Quick way to find invalid responses
-            local first_char = string.sub(resp_body, 1, 1)
-            local last_char = string.sub(resp_body, -1)
-
-            -- JSON check
-            if ('' == resp_body) or ('{' ~= first_char and '[' ~= first_char) or ('}' ~= last_char and ']' ~= last_char) then
-                for _, request in ipairs(request_groups[i]['reqs']) do
-                    table.insert(responses,  ResponseBuilder:build_json_error(
-                            ResponseBuilder.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, request:get_id()
-                    ))
-                end
-            else
-                table.insert(responses, self:trim_brackets(resp_body))
-                -- Push to log
-                self.logger:write_log(self:trim_brackets(resp_body), Proxy.RESP_PREF)
+            for _, request in ipairs(request_groups[i]['reqs']) do
+                table.insert(responses,  ResponseBuilder:build_json_error(
+                        ResponseBuilder.ERR_SERVER_ERROR, 'Server error. Bad JSON-RPC response.', nil, request:get_id()
+                ))
             end
         end
     end
 
     return responses
+end
+
+--- Quick way to find invalid responses
+function Proxy:is_valid_json(str)
+    local first_char = string.sub(str, 1, 1)
+    local last_char = string.sub(str, -1)
+
+    return ('' ~= str) and (('{' == first_char or '[' == first_char) and ('}' == last_char or ']' == last_char))
 end
 
 --- Clean response (trim)
