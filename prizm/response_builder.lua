@@ -43,4 +43,3 @@ function ResponseBuilder:build_json_error(code, message, data, id)
 end
 
 return ResponseBuilder
-

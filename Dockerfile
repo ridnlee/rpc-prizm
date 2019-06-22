@@ -9,6 +9,7 @@ RUN apk add --no-cache --virtual .build-deps \
 
 RUN mkdir /var/log/nginx
 
-#COPY ./prizm /etc/nginx/prizm
+COPY ./prizm /etc/nginx/prizm
+COPY ./docker/nginx/main.lua  /etc/nginx/prizm/main.lua
 COPY ./docker/nginx/server.conf /etc/nginx/conf.d/default.conf
 COPY ./docker/nginx/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf

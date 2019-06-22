@@ -25,8 +25,8 @@ end
 function Request:is_valid()
   if nil == self.valid then
     self.valid = self.data.jsonrpc
-      and self.data.method
-      and true or false
+            and self.data.method
+            and true or false
   end
 
   return self.valid
@@ -47,7 +47,7 @@ end
 --- Get request params (search for nested params)
 -- @return[type=table]
 function Request:get_params()
-  return self:is_valid() and self.data.params.params or self.data.params
+  return self:is_valid() and self.data.params or nil
 end
 
 --- Get request id
