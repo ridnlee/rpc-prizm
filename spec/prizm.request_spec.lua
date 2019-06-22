@@ -1,6 +1,5 @@
-package.path = "/etc/nginx/prizm/?.lua;" .. package.path
 -- Load the module
-local Request = require "request"
+local Request = dofile("./prizm/request.lua")
 
 describe("Check request constructor", function()
   it("Request should be initialized", function()
@@ -74,10 +73,7 @@ describe("Check request params are parsed correctly", function()
     local request = Request:new({
       jsonrpc = '2.2',
       method = 'method.name',
-      params = {
-        route = 'v1.method.name',
-        params = { one = 1, two = 2 }
-      }
+      params = { one = 1, two = 2 }
     }, {})
     assert.are_same({ one = 1, two = 2 }, request:get_params())
   end)
@@ -102,14 +98,7 @@ describe("Check data and body builders", function()
     local data = {
       jsonrpc = '2.2',
       method = 'method.name',
-      params = {
-        route = 'v2.method.name',
-        cache = {
-          ttl = false,
-          key = 'd88d8ds00-s',
-        },
-        params = { one = 1, two = 2 }
-      },
+      params = { one = 1, two = 2 },
       id = 1,
     }
     local request = Request:new(data, json_encoder)

@@ -4,7 +4,7 @@
 -- @license MIT
 
 --- Request factory
-local Request = require ".request"
+local Request = require "rpc-prizm.request"
 
 --- The lua gateway class definition
 local Prizm = {

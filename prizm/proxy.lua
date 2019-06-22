@@ -1,4 +1,4 @@
-local HttpStatuses = require '.http_statuses'
+local HttpStatuses = require 'rpc-prizm.http_statuses'
 
 local Proxy = {
     REQ_PREF = 'REQ', -- Request prefix (used in log message)

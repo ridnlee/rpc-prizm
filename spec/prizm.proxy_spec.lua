@@ -1,9 +1,8 @@
-package.path = "/etc/nginx/prizm/?.lua;" .. package.path
 -- Load the module
-local Proxy = require "proxy"
-local Logger = require "logger"
-local Request = require "request"
-local ResponseBuilder = require "response_builder"
+local Proxy = dofile("./prizm/proxy.lua")
+local Logger = dofile("./prizm/logger.lua")
+local Request = dofile("./prizm/request.lua")
+local ResponseBuilder = dofile("./prizm/response_builder.lua")
 local Json = require "cjson"
 
 describe("Check response validation", function()

@@ -1,10 +1,8 @@
-package.path = "/etc/nginx/prizm/?.lua;" .. package.path
--- Load the module
-local Prizm = require "prizm"
-local Router = require "router"
-local Logger = require "logger"
-local Proxy = require "proxy"
-local ResponseBuilder = require ".response_builder"
+local Prizm = dofile("./prizm/prizm.lua")
+local Router = dofile("./prizm/router.lua")
+local Logger = dofile("./prizm/logger.lua")
+local Proxy = dofile("./prizm/proxy.lua")
+local ResponseBuilder = dofile("./prizm/response_builder.lua")
 
 describe("Check body and data analysis", function()
     it("Method get_body() should return empty string when no body is provided", function()

@@ -1,14 +1,12 @@
-FROM openresty/openresty:alpine-fat
+FROM prizm
 
 RUN apk add --no-cache --virtual .build-deps \
  outils-md5 \
  cmake \
- &&  /usr/local/openresty/luajit/bin/luarocks install lua-resty-jwt \
+ &&  /usr/local/openresty/luajit/bin/luarocks install luacov \
  &&  /usr/local/openresty/luajit/bin/luarocks install busted
-
-RUN mkdir /var/log/nginx
 
 COPY . /etc/nginx/prizm-build
 
 RUN cd /etc/nginx/prizm-build \
-    && /usr/local/openresty/luajit/bin/luarocks  make
+    && busted

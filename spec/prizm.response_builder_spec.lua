@@ -1,6 +1,5 @@
-package.path = "/etc/nginx/prizm/?.lua;" .. package.path
 -- Load the module
-local ResponseBuilder = require "response_builder"
+local ResponseBuilder = dofile("./prizm/response_builder.lua")
 
 describe("Check json rpc error builder", function()
     local builder = ResponseBuilder:new(require "cjson")
