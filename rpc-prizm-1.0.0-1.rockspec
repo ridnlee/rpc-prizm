@@ -1,5 +1,5 @@
 package = "rpc-prizm"
-version = "1.0.0"
+version = "1.0.0-1"
 source = {
   url = "git://github.com/ridnlee/rpc-prizm",
   tag = "1.0.0",
@@ -19,12 +19,12 @@ dependencies = {
 build = {
   type = "builtin",
   modules = {
-    rpc-prizm = "src/prizm.lua",
-    ["rpc-prizm.request"] = "src/rpc-prizm/request.lua",
-    ["rpc-prizm.logger"] = "src/rpc-prizm/logger.lua",
-    ["rpc-prizm.proxy"] = "src/rpc-prizm/proxy.lua",
-    ["rpc-prizm.response_builder"] = "src/rpc-prizm/response_builder.lua",
-    ["rpc-prizm.router"] = "src/rpc-prizm/router.lua",
-    ["rpc-prizm.http_statuses"] = "src/rpc-prizm/http_statuses.lua",
+    ["rpc-prizm"] = "prizm/prizm.lua",
+    ["rpc-prizm.request"] = "prizm/request.lua",
+    ["rpc-prizm.logger"] = "prizm/logger.lua",
+    ["rpc-prizm.proxy"] = "prizm/proxy.lua",
+    ["rpc-prizm.response_builder"] = "prizm/response_builder.lua",
+    ["rpc-prizm.router"] = "prizm/router.lua",
+    ["rpc-prizm.http_statuses"] = "prizm/http_statuses.lua",
   },
 }
