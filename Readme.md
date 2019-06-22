@@ -13,14 +13,9 @@ docker build -t prizm .
 docker run -p 8881:8881 --name prizm_test prizm
 ```
 
-### Debug 
-```
-docker run --rm -v /var/dev/other/apigate/prizm:/etc/nginx/prizm  -p 8881:8881 --name prizm_test prizm
-```
-
 ### Test
 ```
- docker run -v /var/dev/other/apigate/prizm:/etc/nginx/prizm -v /var/dev/other/apigate/spec:/etc/nginx/spec  prizm_test busted /etc/nginx/spec/
+ docker build -f Dockerfile-test -t prizm-test .
  
 ```
 

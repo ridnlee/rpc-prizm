@@ -92,7 +92,7 @@ describe("Check request params are parsed correctly", function()
 end)
 
 describe("Check data and body builders", function()
-  local json_encoder = require "cjson"
+  local json_encoder = require "rapidjson"
 
   describe("Check a positive case", function()
     local data = {

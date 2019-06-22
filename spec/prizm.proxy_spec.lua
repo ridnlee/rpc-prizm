@@ -3,7 +3,7 @@ local Proxy = dofile("./prizm/proxy.lua")
 local Logger = dofile("./prizm/logger.lua")
 local Request = dofile("./prizm/request.lua")
 local ResponseBuilder = dofile("./prizm/response_builder.lua")
-local Json = require "cjson"
+local Json = require "rapidjson"
 
 describe("Check response validation", function()
     local ngx = { req = {}, HTTP_OK = 200, HTTP_INTERNAL_SERVER_ERROR = 500 }

@@ -2,7 +2,7 @@
 local ResponseBuilder = dofile("./prizm/response_builder.lua")
 
 describe("Check json rpc error builder", function()
-    local builder = ResponseBuilder:new(require "cjson")
+    local builder = ResponseBuilder:new(require "rapidjson")
     local data_provider = {
         { { ResponseBuilder.ERR_PARSE_ERROR, nil, {}, 1 }, '{"jsonrpc":"2.0","error":{"code":-32700,"message":"Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.","data":{}},"id":1}', },
         { { ResponseBuilder.ERR_INVALID_REQUEST, nil, {}, 1 }, '{"jsonrpc":"2.0","error":{"code":-32600,"message":"The JSON sent is not a valid Request object.","data":{}},"id":1}', },

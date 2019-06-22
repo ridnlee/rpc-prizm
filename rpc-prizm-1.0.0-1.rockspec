@@ -15,6 +15,7 @@ description = {
 }
 dependencies = {
   "lua >= 5.1",
+  "rapidjson ~> 0.4",
 }
 build = {
   type = "builtin",

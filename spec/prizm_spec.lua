@@ -7,7 +7,7 @@ local ResponseBuilder = dofile("./prizm/response_builder.lua")
 describe("Check body and data analysis", function()
     it("Method get_body() should return empty string when no body is provided", function()
         local ngx = {}
-        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.equals('', prizm:get_body())
 
         ngx.req = {
@@ -27,7 +27,7 @@ describe("Check body and data analysis", function()
                 end
             }
         }
-        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.equals('foo', prizm:get_body())
     end)
 
@@ -39,7 +39,7 @@ describe("Check body and data analysis", function()
                 end
             }
         }
-        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.are_same({}, prizm:get_data())
     end)
 
@@ -51,7 +51,7 @@ describe("Check body and data analysis", function()
                 end
             }
         }
-        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.are_same({ foo = "bar" }, prizm:get_data())
     end)
 
@@ -60,7 +60,7 @@ describe("Check body and data analysis", function()
         ngx1.req.get_body_data = function()
             return '[{ "foo": "bar" }]'
         end
-        local prizm1 = Prizm:new({ ngx = ngx1, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm1 = Prizm:new({ ngx = ngx1, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.is_true(prizm1:is_batch())
     end)
 
@@ -69,7 +69,7 @@ describe("Check body and data analysis", function()
         ngx2.req.get_body_data = function()
             return '{ "foo": "bar" }'
         end
-        local prizm2 = Prizm:new({ ngx = ngx2, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm2 = Prizm:new({ ngx = ngx2, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.is_false(prizm2:is_batch())
     end)
 
@@ -78,7 +78,7 @@ describe("Check body and data analysis", function()
         ngx3.req.get_body_data = function()
             return nil
         end
-        local prizm3 = Prizm:new({ ngx = ngx3, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm3 = Prizm:new({ ngx = ngx3, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.is_false(prizm3:is_batch())
     end)
 
@@ -87,7 +87,7 @@ describe("Check body and data analysis", function()
         ngx4.req.get_body_data = function()
             return "foo"
         end
-        local prizm4 = Prizm:new({ ngx = ngx4, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm4 = Prizm:new({ ngx = ngx4, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         assert.is_false(prizm4:is_batch())
     end)
 end)
@@ -95,7 +95,7 @@ end)
 describe("Check request factory", function()
     local ngx = { req = {} }
     it("Should return a single request for a single dimensional table", function()
-        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         ngx.req.get_body_data = function()
             return '{"foo":"bar"}'
         end
@@ -103,7 +103,7 @@ describe("Check request factory", function()
     end)
 
     it("Should return a multi request for the multi dimensional table", function()
-        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "cjson" })
+        local prizm = Prizm:new({ ngx = ngx, router = {}, logger = {}, response_builder = {}, proxy = {}, json = require "rapidjson" })
         ngx.req.get_body_data = function()
             return '[{"foo":"bar"},{"foo":"bar"},{"foo":"bar"}]'
         end
@@ -140,12 +140,12 @@ describe("Check request validation", function()
     ]]
     end
 
-    local response_builder = ResponseBuilder:new(require "cjson")
+    local response_builder = ResponseBuilder:new(require "rapidjson")
     local logger = Logger:new(ngx, false)
     local proxy = Proxy:new(ngx, logger)
     local prizm = Prizm:new({
         ngx = ngx,
-        json = require "cjson",
+        json = require "rapidjson",
         logger = Logger:new(ngx, false),
         router = Router:new({
             { rule = 's1%.([^%.]+).*', addr = '/serv1' },
@@ -168,12 +168,12 @@ describe("Check one-request batch processing", function()
     ngx.req.get_uri_args = function()
         return {}
     end
-    local response_builder = ResponseBuilder:new(require "cjson")
+    local response_builder = ResponseBuilder:new(require "rapidjson")
     local logger = Logger:new(ngx, false)
     local proxy = Proxy:new(ngx, logger)
     local prizm = Prizm:new({
         ngx = ngx,
-        json = require "cjson",
+        json = require "rapidjson",
         logger = Logger:new(ngx, false),
         router = Router:new({
             { rule = 'v1%.([^%.]+).*', addr = '/serv1' },
