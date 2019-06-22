@@ -1,7 +1,7 @@
 package = "rpc-prizm"
 version = "1.0.0"
 source = {
-  url = "git://github.com/Ridnlee/rpc-prizm",
+  url = "git://github.com/ridnlee/rpc-prizm",
   tag = "1.0.0",
 }
 description = {
@@ -10,7 +10,7 @@ description = {
       RPC-Prizm is a reverse proxy over OpenResty Lua NGINX module.
       This package parse, rebuild, route requests for JSON-RPC 2.0.
     ]],
-  homepage = "http://github.com/Ridnlee/rpc-prizm",
+  homepage = "http://github.com/ridnlee/rpc-prizm",
   license = "MIT",
 }
 dependencies = {
