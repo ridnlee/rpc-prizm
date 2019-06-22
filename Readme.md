@@ -1,4 +1,7 @@
 # RPC-prizm 
+[![Build Status](https://travis-ci.org/ridnlee/rpc-prizm.svg?branch=master)](https://travis-ci.org/ridnlee/rpc-prizm)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/ridnlee/rpc-prizm/master/LICENSE)
+
 RPC-prizm is transparent for clients JSON-RPC gateway based on Nginx+Lua. 
 
 It parse, rebuild (in case batch) and route rpc requests between several services and aggregate reponses (in case batch).     
