@@ -18,6 +18,8 @@ ResponseBuilder.messages = {
     [ResponseBuilder.ERR_EMPTY_REQUEST] = 'Empty request.',
 }
 
+--- Create new response builder
+-- @param[type=table] json Json encoder instance
 function ResponseBuilder:new(json)
     assert(type(json) == "table", "Parameter 'json' is required and should be a table!")
     local builder = setmetatable({}, ResponseBuilder)

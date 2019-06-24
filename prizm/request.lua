@@ -5,9 +5,9 @@
 local Request = {}
 
 --- Create new request
--- param[type=table] data Request data
--- param[type=table] json_encoder json encoder instance
--- return[type=table] New request instance
+-- @param[type=table] data Request data
+-- @param[type=table] json_encoder json encoder instance
+-- @return[type=table] New request instance
 function Request:new(data, json_encoder)
   assert(type(data) == "table", "Parameter 'data' is required and should be a table!")
   assert(type(json_encoder) == "table", "Parameter 'json_encoder' is required and should be a table!")

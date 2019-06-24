@@ -133,7 +133,7 @@ function Prizm:get_requests()
 end
 
 --- Get request collection prepared for ngx.location.capture_multi call
--- @return[type=table] The table of requests
+-- @return[type=table] The table of responses
 function Prizm:run()
     -- Execute 'pre' middleware
     if false == self.hooks.pre(self) then
@@ -157,7 +157,9 @@ function Prizm:run()
     return self.responses
 end
 
----
+---Create a map of requests associated with endpoints
+-- @param[type=table] requests Table of rpc requests
+-- @return[type=table] The table of requests
 function Prizm:prepare_map_requests(requests)
     local map_requests = {}
 

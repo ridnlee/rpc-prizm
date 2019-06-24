@@ -16,7 +16,7 @@ function Router:new(routes)
 end
 
 --- Find address for json-rpc method
--- param[type=string] json-rpc method
+-- param[type=string] method JSON-rpc method
 -- @return[type=string] Request uri
 -- @return[type=string] Error
 function Router:get_address(method)

@@ -1,8 +1,8 @@
 package = "rpc-prizm"
-version = "1.0.0-1"
+version = "1.0.1-1"
 source = {
   url = "git://github.com/ridnlee/rpc-prizm",
-  tag = "1.0.0",
+  tag = "1.0.1",
 }
 description = {
   summary = "A package for building JSON-RPC 2.0 Gateway with nginx and lua",
