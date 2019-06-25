@@ -4,7 +4,7 @@
 
 RPC-prizm is transparent for clients JSON-RPC gateway based on Nginx+Lua. 
 
-It parse, rebuild (in case batch) and route rpc requests between several services and aggregate reponses (in case batch).
+It parses, rebuilds (in case _batch_) and routes rpc requests between several services and aggregates reponses (in case _batch_).
 ## Installation
 For using rpc-prizm you have to have nginx compiled with
 [ngx\_http\_lua\_module](https://github.com/openresty/lua-nginx-module#installation) module.
