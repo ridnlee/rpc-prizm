@@ -8,8 +8,6 @@ It parses, rebuilds (in case _batch_) and routes rpc requests between several se
 ## Installation
 For using rpc-prizm you have to have nginx compiled with
 [ngx\_http\_lua\_module](https://github.com/openresty/lua-nginx-module#installation) module.
-Take a look at the `example/provision.sh` file to get a tip on how to do it.
-
 RPC-prizm can be installed via the [luarocks](https://luarocks.org/modules/ridnlee/rpc-prizm) package manager.
 Just run:
 ```bash
